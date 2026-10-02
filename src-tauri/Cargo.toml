@@ -1,0 +1,20 @@
+[package]
+name = "token-usage"
+version = "0.1.0"
+description = "A local-first AI capacity planner"
+authors = ["Token Usage contributors"]
+edition = "2021"
+
+[lib]
+name = "token_usage_lib"
+crate-type = ["rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+chrono = { version = "0.4", features = ["serde"] }
+dirs = "5"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tauri = { version = "2", features = ["tray-icon"] }

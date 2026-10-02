@@ -10,7 +10,7 @@ The first release should keep five responsibilities separate:
 4. Planning computes transparent, conservative capacity ranges.
 5. Native views present allowance, freshness, and connection health.
 
-The shared `TokenUsageCore` package begins with the provider-independent model so macOS and iOS clients can use the same semantics.
+The Tauri core owns the provider-independent model in Rust. The React client renders these normalized records and can share its interface and API types with future mobile and extension clients.
 
 ## Data rules
 
@@ -42,4 +42,3 @@ Claude Code should use documented status-line quota fields for eligible subscrip
 Codex should use its documented local App Server account usage and rate-limit methods. The prototype must verify actual installed-version behavior and record nullable or absent fields honestly.
 
 Provider credentials remain owned by provider-supported components. The application should store only its own pairing secrets or explicitly supported API credentials in platform secure storage.
-
