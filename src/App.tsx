@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 
 type WindowName = "Five-hour" | "Seven-day";
 type Snapshot = { window: WindowName; used?: number; resetsAt?: string; observedAt: string };
@@ -9,6 +10,7 @@ type NativeSnapshot = {
   resetsAt?: string;
   observedAt: string;
 };
+type TrackingSetup = { status: "ready" | "installed" | "manualConfigurationRequired"; message: string };
 
 const initialSnapshots: Snapshot[] = [
   { window: "Five-hour", observedAt: "No local reading yet" },
@@ -18,21 +20,46 @@ const initialSnapshots: Snapshot[] = [
 export default function App() {
   const [snapshots, setSnapshots] = useState(initialSnapshots);
   const [payload, setPayload] = useState("");
-  const [message, setMessage] = useState("Paste a Claude Code status-line payload to create your first local reading.");
+  const [message, setMessage] = useState("Enable automatic tracking or paste a Claude Code status-line payload to create your first reading.");
+  const [trackingStatus, setTrackingStatus] = useState("Not connected");
+
+  function applySnapshots(stored: NativeSnapshot[]) {
+    setSnapshots(stored.map((snapshot) => ({
+      window: snapshot.poolId === "five-hour" ? "Five-hour" : "Seven-day",
+      used: snapshot.usedPercentage,
+      resetsAt: snapshot.resetsAt,
+      observedAt: new Date(snapshot.observedAt).toLocaleString()
+    })));
+  }
+
+  useEffect(() => {
+    const unlisten = listen<NativeSnapshot[]>("claude-quota-updated", (event) => {
+      applySnapshots(event.payload);
+      setTrackingStatus("Receiving local Claude Code updates");
+      setMessage("Saved a fresh Claude Code quota snapshot locally.");
+    });
+    return () => { void unlisten.then((remove) => remove()); };
+  }, []);
 
   async function importPayload() {
     try {
       JSON.parse(payload);
       const stored = await invoke<NativeSnapshot[]>("collect_claude_statusline", { payload });
-      setSnapshots(stored.map((snapshot) => ({
-        window: snapshot.poolId === "five-hour" ? "Five-hour" : "Seven-day",
-        used: snapshot.usedPercentage,
-        resetsAt: snapshot.resetsAt,
-        observedAt: new Date(snapshot.observedAt).toLocaleString()
-      })));
+      applySnapshots(stored);
       setMessage("Saved a provider-reported quota snapshot locally.");
     } catch {
       setMessage("Unable to save this reading. Check that the complete Claude Code status-line JSON is valid.");
+    }
+  }
+
+  async function enableAutomaticTracking() {
+    try {
+      const result = await invoke<TrackingSetup>("setup_claude_code_tracking");
+      setTrackingStatus(result.status === "manualConfigurationRequired" ? "Existing status line detected" : "Ready for Claude Code");
+      setMessage(result.message);
+    } catch {
+      setTrackingStatus("Setup needs attention");
+      setMessage("Unable to configure Claude Code tracking. Check the app has permission to write ~/.claude/settings.json.");
     }
   }
 
@@ -46,6 +73,7 @@ export default function App() {
         <footer>Observed: {snapshot.observedAt}{snapshot.resetsAt ? ` · Resets: ${snapshot.resetsAt}` : ""}</footer>
       </article>)}
     </section>
-    <section className="importer"><div><p className="eyebrow">FIRST CONNECTION</p><h2>Import a Claude Code status line</h2><p>Use provider-reported usage. Token Usage does not collect credentials, prompts, or transcripts.</p></div><textarea aria-label="Claude Code status-line JSON" value={payload} onChange={(event) => setPayload(event.target.value)} placeholder='{"rate_limits":{"five_hour":{"used_percentage":35}}}' /><button className="primary" onClick={importPayload}>Save local reading</button></section>
+    <section className="importer setup"><div><p className="eyebrow">AUTOMATIC TRACKING</p><h2>Connect Claude Code</h2><p>{trackingStatus}. Token Usage adds its local bridge only when Claude Code does not already use a custom status line.</p></div><button className="primary" onClick={enableAutomaticTracking}>Enable automatic tracking</button></section>
+    <section className="importer"><div><p className="eyebrow">MANUAL IMPORT</p><h2>Import a Claude Code status line</h2><p>Use provider-reported usage. Token Usage does not collect credentials, prompts, or transcripts.</p></div><textarea aria-label="Claude Code status-line JSON" value={payload} onChange={(event) => setPayload(event.target.value)} placeholder='{"rate_limits":{"five_hour":{"used_percentage":35}}}' /><button className="primary" onClick={importPayload}>Save local reading</button></section>
   </main>;
 }
