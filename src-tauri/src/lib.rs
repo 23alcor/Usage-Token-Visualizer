@@ -36,6 +36,11 @@ fn collect_claude_statusline(payload: String) -> Result<Vec<QuotaSnapshot>, Stri
     collect_and_store(&payload)
 }
 
+#[tauri::command]
+fn load_claude_snapshots() -> Result<Vec<QuotaSnapshot>, String> {
+    load_snapshot_history()
+}
+
 fn collect_and_store(payload: &str) -> Result<Vec<QuotaSnapshot>, String> {
     let parsed: ClaudePayload = serde_json::from_str(&payload)
         .map_err(|_| "The status-line input is not valid JSON.".to_owned())?;
@@ -225,11 +230,19 @@ fn history_path() -> Result<PathBuf, String> {
 
 fn append_to_local_history(snapshots: &[QuotaSnapshot]) -> Result<(), String> {
     let path = history_path()?;
-    let mut history: Vec<QuotaSnapshot> = fs::read_to_string(&path).ok()
-        .and_then(|contents| serde_json::from_str(&contents).ok()).unwrap_or_default();
+    let mut history = load_snapshot_history()?;
     history.extend_from_slice(snapshots);
     fs::write(path, serde_json::to_vec_pretty(&history).map_err(|error| error.to_string())?)
         .map_err(|error| error.to_string())
+}
+
+fn load_snapshot_history() -> Result<Vec<QuotaSnapshot>, String> {
+    let path = history_path()?;
+    if !path.exists() {
+        return Ok(Vec::new());
+    }
+    let contents = fs::read_to_string(&path).map_err(|error| error.to_string())?;
+    serde_json::from_str(&contents).map_err(|_| "The local Token Usage snapshot history could not be read.".to_owned())
 }
 
 pub fn run() {
@@ -238,7 +251,7 @@ pub fn run() {
             start_claude_status_line_listener(app.handle().clone()).map_err(std::io::Error::other)?;
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![collect_claude_statusline, setup_claude_code_tracking])
+        .invoke_handler(tauri::generate_handler![collect_claude_statusline, load_claude_snapshots, setup_claude_code_tracking])
         .run(tauri::generate_context!())
         .expect("error while running Token Usage");
 }

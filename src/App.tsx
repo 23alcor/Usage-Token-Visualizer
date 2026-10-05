@@ -33,6 +33,12 @@ export default function App() {
   }
 
   useEffect(() => {
+    void invoke<NativeSnapshot[]>("load_claude_snapshots")
+      .then((history) => {
+        if (history.length >= 2) applySnapshots(history.slice(-2));
+      })
+      .catch(() => setMessage("The local snapshot history could not be loaded."));
+
     const unlisten = listen<NativeSnapshot[]>("claude-quota-updated", (event) => {
       applySnapshots(event.payload);
       setTrackingStatus("Receiving local Claude Code updates");
