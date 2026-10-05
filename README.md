@@ -49,7 +49,7 @@ With Token Usage open, select **Enable automatic tracking**. The app starts a lo
 ~/.claude/token-usage-statusline.sh
 ```
 
-It then adds that script as the `statusLine.command` in `~/.claude/settings.json`, with a 60-second refresh interval. Claude Code sends the provider-reported JSON to this local bridge after responses and when quota windows reset. Send one Claude Code message after enabling the connection to record your first snapshot.
+It then adds that script as the `statusLine.command` in `~/.claude/settings.json`, with a 60-second refresh interval. Claude Code sends the provider-reported JSON to this local bridge after responses and when quota windows reset. Keep Token Usage open while you use Claude Code; the local receiver exists only while the app is running. Send one Claude Code message after enabling the connection to record your first snapshot.
 
 If you already have a custom Claude Code status line, Token Usage leaves it unchanged and shows the bridge path for manual integration. It never replaces an existing status-line command.
 

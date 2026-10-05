@@ -119,10 +119,14 @@ fn read_settings(path: &Path) -> Result<serde_json::Value, String> {
 fn write_status_line_bridge(path: &Path) -> Result<(), String> {
     let bridge = r#"#!/bin/sh
 # Installed by Token Usage. Claude Code sends status-line JSON on stdin.
-curl --silent --output /dev/null --connect-timeout 1 --max-time 2 \
+curl --silent --fail --output /dev/null --connect-timeout 1 --max-time 2 \
   --request POST --header 'Content-Type: application/json' \
-  --data-binary @- http://127.0.0.1:16472/claude-code || true
-printf 'Token Usage tracking active'
+  --data-binary @- http://127.0.0.1:16472/claude-code
+if [ $? -eq 0 ]; then
+  printf 'Token Usage tracking active'
+else
+  printf 'Token Usage: open the app to track usage'
+fi
 "#;
     fs::write(path, bridge).map_err(|error| error.to_string())?;
     #[cfg(unix)]

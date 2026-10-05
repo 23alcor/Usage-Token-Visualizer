@@ -21,7 +21,7 @@ export default function App() {
   const [snapshots, setSnapshots] = useState(initialSnapshots);
   const [payload, setPayload] = useState("");
   const [message, setMessage] = useState("Enable automatic tracking or paste a Claude Code status-line payload to create your first reading.");
-  const [trackingStatus, setTrackingStatus] = useState("Not connected");
+  const [trackingStatus, setTrackingStatus] = useState("Listener running while this app stays open");
 
   function applySnapshots(stored: NativeSnapshot[]) {
     setSnapshots(stored.map((snapshot) => ({
@@ -55,7 +55,7 @@ export default function App() {
   async function enableAutomaticTracking() {
     try {
       const result = await invoke<TrackingSetup>("setup_claude_code_tracking");
-      setTrackingStatus(result.status === "manualConfigurationRequired" ? "Existing status line detected" : "Ready for Claude Code");
+      setTrackingStatus(result.status === "manualConfigurationRequired" ? "Existing status line detected" : "Automatic tracking enabled while this app stays open");
       setMessage(result.message);
     } catch {
       setTrackingStatus("Setup needs attention");
@@ -73,7 +73,7 @@ export default function App() {
         <footer>Observed: {snapshot.observedAt}{snapshot.resetsAt ? ` · Resets: ${snapshot.resetsAt}` : ""}</footer>
       </article>)}
     </section>
-    <section className="importer setup"><div><p className="eyebrow">AUTOMATIC TRACKING</p><h2>Connect Claude Code</h2><p>{trackingStatus}. Token Usage adds its local bridge only when Claude Code does not already use a custom status line.</p></div><button className="primary" onClick={enableAutomaticTracking}>Enable automatic tracking</button></section>
+    <section className="importer setup"><div><p className="eyebrow">AUTOMATIC TRACKING</p><h2>Connect Claude Code</h2><p>{trackingStatus}. Keep Token Usage open while you use Claude Code. The bridge leaves any existing custom status line unchanged.</p></div><button className="primary" onClick={enableAutomaticTracking}>Enable automatic tracking</button></section>
     <section className="importer"><div><p className="eyebrow">MANUAL IMPORT</p><h2>Import a Claude Code status line</h2><p>Use provider-reported usage. Token Usage does not collect credentials, prompts, or transcripts.</p></div><textarea aria-label="Claude Code status-line JSON" value={payload} onChange={(event) => setPayload(event.target.value)} placeholder='{"rate_limits":{"five_hour":{"used_percentage":35}}}' /><button className="primary" onClick={importPayload}>Save local reading</button></section>
   </main>;
 }
